@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-#define TAB_SIZE 10     // Tamanho do tabuleiro (10x10)
-#define SHIP_SIZE 3     // Tamanho fixo dos navios
+#define TAB_SIZE 10    // Tamanho do tabuleiro 10x10
+#define SHIP_SIZE 3    // Tamanho fixo dos navios
 
-// Função para imprimir o tabuleiro no console
+// Função para imprimir o tabuleiro
 void imprimirTabuleiro(int tab[TAB_SIZE][TAB_SIZE]) {
     printf("Tabuleiro Batalha Naval:\n");
     for (int i = 0; i < TAB_SIZE; i++) {
@@ -14,60 +14,144 @@ void imprimirTabuleiro(int tab[TAB_SIZE][TAB_SIZE]) {
     }
 }
 
-int main() {
-    int tabuleiro[TAB_SIZE][TAB_SIZE] = {0};  // Inicializa tabuleiro com 0 (água)
+// Função para verificar se uma posição está livre (0) no tabuleiro
+int posicaoLivre(int tab[TAB_SIZE][TAB_SIZE], int linha, int coluna) {
+    if (tab[linha][coluna] == 0) return 1;  // livre
+    return 0;                              // ocupada
+}
 
-    // Vetores representando os navios (tamanho fixo)
-    int navio_vertical[SHIP_SIZE] = {3, 3, 3};     // valor 3 representa navio
-    int navio_horizontal[SHIP_SIZE] = {3, 3, 3};   // valor 3 representa navio
-
-    // Coordenadas iniciais definidas diretamente no código
-    int nav_v_linha = 1;      // Linha inicial do navio vertical
-    int nav_v_coluna = 5;     // Coluna fixa do navio vertical
-
-    int nav_h_linha = 6;      // Linha fixa do navio horizontal
-    int nav_h_coluna = 2;     // Coluna inicial do navio horizontal
-
-    // Validar limites para navio vertical
-    if (nav_v_linha + SHIP_SIZE > TAB_SIZE) {
-        printf("Erro: Navio vertical ultrapassa limites do tabuleiro.\n");
-        return 1;
-    }
-
-    // Validar limites para navio horizontal
-    if (nav_h_coluna + SHIP_SIZE > TAB_SIZE) {
-        printf("Erro: Navio horizontal ultrapassa limites do tabuleiro.\n");
-        return 1;
-    }
-
-    // Validar sobreposição simples:
-    // Para cada posição do navio vertical, verifica se coincide com alguma posição do navio horizontal
-    for (int i = 0; i < SHIP_SIZE; i++) {
-        int linha_vert = nav_v_linha + i;
-        int coluna_vert = nav_v_coluna;
-
-        for (int j = 0; j < SHIP_SIZE; j++) {
-            int linha_hori = nav_h_linha;
-            int coluna_hori = nav_h_coluna + j;
-
-            if (linha_vert == linha_hori && coluna_vert == coluna_hori) {
-                printf("Erro: Navios se sobrepõem!\n");
-                return 1;
+// Função para verificar sobreposição para um navio horizontal/vertical
+int verificaSobreposicaoHV(int tab[TAB_SIZE][TAB_SIZE], int linha_inicial, int coluna_inicial, int tamanho, char orientacao) {
+    if (orientacao == 'H') {
+        for (int i = 0; i < tamanho; i++) {
+            if (!posicaoLivre(tab, linha_inicial, coluna_inicial + i)) {
+                return 0; // sobreposição
+            }
+        }
+    } else if (orientacao == 'V') {
+        for (int i = 0; i < tamanho; i++) {
+            if (!posicaoLivre(tab, linha_inicial + i, coluna_inicial)) {
+                return 0; // sobreposição
             }
         }
     }
+    return 1; // sem sobreposição
+}
 
-    // Posicionar navio vertical no tabuleiro copiando valores do vetor
-    for (int i = 0; i < SHIP_SIZE; i++) {
-        tabuleiro[nav_v_linha + i][nav_v_coluna] = navio_vertical[i];
+// Função para verificar sobreposição para um navio diagonal
+int verificaSobreposicaoDiagonal(int tab[TAB_SIZE][TAB_SIZE], int linha_inicial, int coluna_inicial, int tamanho, char tipo) {
+    // tipo 'D' para diagonal crescente (linha++, coluna++)
+    // tipo 'A' para diagonal decrescente (linha++, coluna--)
+    if (tipo == 'D') {
+        for (int i = 0; i < tamanho; i++) {
+            if (!posicaoLivre(tab, linha_inicial + i, coluna_inicial + i)) {
+                return 0; // sobreposição
+            }
+        }
+    } else if (tipo == 'A') {
+        for (int i = 0; i < tamanho; i++) {
+            if (!posicaoLivre(tab, linha_inicial + i, coluna_inicial - i)) {
+                return 0; // sobreposição
+            }
+        }
+    }
+    return 1; // sem sobreposição
+}
+
+// Função para posicionar navio horizontal ou vertical no tabuleiro
+void posicionarNavioHV(int tab[TAB_SIZE][TAB_SIZE], int linha_inicial, int coluna_inicial, int tamanho, char orientacao) {
+    if (orientacao == 'H') {
+        for (int i = 0; i < tamanho; i++) {
+            tab[linha_inicial][coluna_inicial + i] = 3;
+        }
+    } else if (orientacao == 'V') {
+        for (int i = 0; i < tamanho; i++) {
+            tab[linha_inicial + i][coluna_inicial] = 3;
+        }
+    }
+}
+
+// Função para posicionar navio diagonal no tabuleiro
+void posicionarNavioDiagonal(int tab[TAB_SIZE][TAB_SIZE], int linha_inicial, int coluna_inicial, int tamanho, char tipo) {
+    if (tipo == 'D') { // diagonal crescente
+        for (int i = 0; i < tamanho; i++) {
+            tab[linha_inicial + i][coluna_inicial + i] = 3;
+        }
+    } else if (tipo == 'A') { // diagonal decrescente
+        for (int i = 0; i < tamanho; i++) {
+            tab[linha_inicial + i][coluna_inicial - i] = 3;
+        }
+    }
+}
+
+int main() {
+    int tabuleiro[TAB_SIZE][TAB_SIZE] = {0};  // Inicializa tabuleiro com água (0)
+
+    // Definição dos navios - tamanho fixo 3
+    // 1) Navio vertical
+    int nv_linha = 1, nv_coluna = 1;
+
+    // 2) Navio horizontal
+    int nh_linha = 5, nh_coluna = 3;
+
+    // 3) Navio diagonal crescente (linha++, coluna++)
+    int ndc_linha = 0, ndc_coluna = 6;
+
+    // 4) Navio diagonal decrescente (linha++, coluna--)
+    int ndd_linha = 6, ndd_coluna = 9;
+
+    // Validações dos limites e posicionamentos
+
+    // Navio vertical - verifica limite
+    if (nv_linha + SHIP_SIZE > TAB_SIZE) {
+        printf("Erro: Navio vertical ultrapassa limites.\n");
+        return 1;
     }
 
-    // Posicionar navio horizontal no tabuleiro copiando valores do vetor
-    for (int i = 0; i < SHIP_SIZE; i++) {
-        tabuleiro[nav_h_linha][nav_h_coluna + i] = navio_horizontal[i];
+    // Navio horizontal - verifica limite
+    if (nh_coluna + SHIP_SIZE > TAB_SIZE) {
+        printf("Erro: Navio horizontal ultrapassa limites.\n");
+        return 1;
     }
 
-    // Exibir o tabuleiro completo
+    // Navio diagonal crescente - verifica limite
+    if (ndc_linha + SHIP_SIZE > TAB_SIZE || ndc_coluna + SHIP_SIZE > TAB_SIZE) {
+        printf("Erro: Navio diagonal crescente ultrapassa limites.\n");
+        return 1;
+    }
+
+    // Navio diagonal decrescente - verifica limite
+    if (ndd_linha + SHIP_SIZE > TAB_SIZE || ndd_coluna - (SHIP_SIZE - 1) < 0) {
+        printf("Erro: Navio diagonal decrescente ultrapassa limites.\n");
+        return 1;
+    }
+
+    // Verifica sobreposição dos navios (simplificada)
+
+    if (!verificaSobreposicaoHV(tabuleiro, nv_linha, nv_coluna, SHIP_SIZE, 'V')) {
+        printf("Erro: Sobreposição no navio vertical.\n");
+        return 1;
+    }
+    if (!verificaSobreposicaoHV(tabuleiro, nh_linha, nh_coluna, SHIP_SIZE, 'H')) {
+        printf("Erro: Sobreposição no navio horizontal.\n");
+        return 1;
+    }
+    if (!verificaSobreposicaoDiagonal(tabuleiro, ndc_linha, ndc_coluna, SHIP_SIZE, 'D')) {
+        printf("Erro: Sobreposição no navio diagonal crescente.\n");
+        return 1;
+    }
+    if (!verificaSobreposicaoDiagonal(tabuleiro, ndd_linha, ndd_coluna, SHIP_SIZE, 'A')) {
+        printf("Erro: Sobreposição no navio diagonal decrescente.\n");
+        return 1;
+    }
+
+    // Posiciona os navios no tabuleiro
+    posicionarNavioHV(tabuleiro, nv_linha, nv_coluna, SHIP_SIZE, 'V');
+    posicionarNavioHV(tabuleiro, nh_linha, nh_coluna, SHIP_SIZE, 'H');
+    posicionarNavioDiagonal(tabuleiro, ndc_linha, ndc_coluna, SHIP_SIZE, 'D');
+    posicionarNavioDiagonal(tabuleiro, ndd_linha, ndd_coluna, SHIP_SIZE, 'A');
+
+    // Imprime o tabuleiro
     imprimirTabuleiro(tabuleiro);
 
     return 0;
